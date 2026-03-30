@@ -200,10 +200,11 @@ export class WhatsAppChannel implements IChannel {
     const body = extractMessageText(msg);
     const audioMsg = msg.message?.audioMessage;
     const imageMsg = msg.message?.imageMessage;
+    const documentMsg = msg.message?.documentMessage;
 
     // Skip messages with no processable content
-    if (!body && !audioMsg && !imageMsg) {
-      console.log("[Gateway] [WhatsApp] Skipping message with no text, audio, or image.");
+    if (!body && !audioMsg && !imageMsg && !documentMsg) {
+      console.log("[Gateway] [WhatsApp] Skipping message with no text, audio, image, or file.");
       return;
     }
 
@@ -270,6 +271,25 @@ export class WhatsAppChannel implements IChannel {
         console.log(`[Gateway] [WhatsApp] Downloaded image: ${buffer.length} bytes, ${imageMsg.mimetype ?? "image/jpeg"}`);
       } catch (err) {
         console.error("[Gateway] [WhatsApp] Failed to download image:", err);
+      }
+    }
+
+    // Download document if present
+    if (documentMsg) {
+      try {
+        const buffer = await downloadMediaMessage(
+          msg as any,
+          "buffer",
+          {},
+        ) as Buffer;
+        channelMessage.file = {
+          buffer,
+          mimetype: documentMsg.mimetype ?? "application/octet-stream",
+          filename: documentMsg.fileName ?? `file-${Date.now()}`,
+        };
+        console.log(`[Gateway] [WhatsApp] Downloaded file: ${documentMsg.fileName ?? "unknown"} (${buffer.length} bytes)`);
+      } catch (err) {
+        console.error("[Gateway] [WhatsApp] Failed to download file:", err);
       }
     }
 

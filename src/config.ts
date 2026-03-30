@@ -19,7 +19,6 @@ export interface CopilotConfig {
 export interface OpenAIConfig {
   apiKey: string;
   whisperModel: string;
-  visionModel: string;
   language: string;
 }
 
@@ -57,7 +56,6 @@ const DEFAULT_CONFIG: GatewayConfig = {
   openai: {
     apiKey: "",
     whisperModel: "whisper-1",
-    visionModel: "gpt-4o",
     language: "",
   },
 };

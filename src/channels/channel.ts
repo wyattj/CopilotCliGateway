@@ -9,6 +9,12 @@ export interface ChannelImage {
   mimetype: string;
 }
 
+export interface ChannelFile {
+  buffer: Buffer;
+  mimetype: string;
+  filename: string;
+}
+
 export interface ChannelMessage {
   channelName: string;
   senderId: string;
@@ -18,6 +24,7 @@ export interface ChannelMessage {
   timestamp: Date;
   audio?: ChannelAudio;
   image?: ChannelImage;
+  file?: ChannelFile;
 }
 
 /** A single inline button. */

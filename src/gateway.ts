@@ -56,7 +56,7 @@ export class Gateway {
     this.channels = channels;
     this.copilot = copilot;
     this.mcpServers = mcpServers;
-    this.openaiConfig = openaiConfig ?? { apiKey: "", whisperModel: "whisper-1", visionModel: "gpt-4o", language: "" };
+    this.openaiConfig = openaiConfig ?? { apiKey: "", whisperModel: "whisper-1", language: "" };
     this.sessionStore = sessionStore!;
   }
 
@@ -354,7 +354,7 @@ export class Gateway {
         prompt = transcription;
       }
 
-      // Handle image messages — save to tmp folder so Copilot can read the file directly
+      // Handle image messages — save to tmp/images/ so Copilot can read the file directly
       if (msg.image) {
         const ext = extensionFromMimetype(msg.image.mimetype);
         const filename = `image-${Date.now()}.${ext}`;
@@ -363,23 +363,45 @@ export class Gateway {
         const peekSession = this.sessionStore.getActiveSession(SESSION_KEY);
         const workDir = peekSession?.workingDirectory;
         if (!workDir) {
-          // No working directory yet — can't save the image, let the directory gate handle it
           if (prompt) {
             prompt = `${prompt}\n\n(An image was attached but cannot be processed until a working directory is set.)`;
           }
         } else {
-          const tmpPath = this.tmpDir(workDir);
-          await mkdir(tmpPath, { recursive: true });
-          const filePath = resolve(tmpPath, filename);
+          const imagesPath = resolve(this.tmpDir(workDir), "images");
+          await mkdir(imagesPath, { recursive: true });
+          const filePath = resolve(imagesPath, filename);
           await writeFile(filePath, msg.image.buffer);
           console.log(`[Gateway] Saved image to ${filePath} (${msg.image.buffer.length} bytes)`);
 
-          // Build prompt telling Copilot to read the image file
-          const relativePath = `./tmp/${filename}`;
+          const relativePath = `./tmp/images/${filename}`;
           if (prompt) {
             prompt = `${prompt}\n\nI've attached an image at ${relativePath} — please read and analyze it.`;
           } else {
             prompt = `I've attached an image at ${relativePath} — please read and analyze it.`;
+          }
+        }
+      }
+
+      // Handle file messages — save to tmp/ so Copilot can access the file
+      if (msg.file) {
+        const peekSession = this.sessionStore.getActiveSession(SESSION_KEY);
+        const workDir = peekSession?.workingDirectory;
+        if (!workDir) {
+          if (prompt) {
+            prompt = `${prompt}\n\n(A file was attached but cannot be processed until a working directory is set.)`;
+          }
+        } else {
+          const tmpPath = this.tmpDir(workDir);
+          await mkdir(tmpPath, { recursive: true });
+          const filePath = resolve(tmpPath, msg.file.filename);
+          await writeFile(filePath, msg.file.buffer);
+          console.log(`[Gateway] Saved file to ${filePath} (${msg.file.buffer.length} bytes)`);
+
+          const relativePath = `./tmp/${msg.file.filename}`;
+          if (prompt) {
+            prompt = `${prompt}\n\nI've attached a file at ${relativePath} — please read and process it.`;
+          } else {
+            prompt = `I've attached a file at ${relativePath} — please read and process it.`;
           }
         }
       }

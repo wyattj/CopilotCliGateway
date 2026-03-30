@@ -29,6 +29,7 @@ export class TelegramChannel implements IChannel {
     this.bot.on("message:photo", (ctx) => this.handlePhotoMessage(ctx));
     this.bot.on("message:voice", (ctx) => this.handleVoiceMessage(ctx));
     this.bot.on("message:audio", (ctx) => this.handleAudioMessage(ctx));
+    this.bot.on("message:document", (ctx) => this.handleDocumentMessage(ctx));
 
     // Handle inline keyboard button taps
     this.bot.on("callback_query:data", (ctx) => this.handleCallbackQuery(ctx));
@@ -299,6 +300,33 @@ export class TelegramChannel implements IChannel {
       });
     } catch (err) {
       console.error("[Gateway] [Telegram] Failed to download audio:", err);
+    }
+  }
+  private async handleDocumentMessage(ctx: Context): Promise<void> {
+    if (!this.isAllowed(ctx)) return;
+    if (!ctx.message?.document) return;
+
+    const doc = ctx.message.document;
+
+    try {
+      const buffer = await this.downloadFile(doc.file_id);
+      console.log(`[Gateway] [Telegram] Downloaded document: ${doc.file_name ?? "unknown"} (${buffer.length} bytes)`);
+
+      await this.emit({
+        channelName: "telegram",
+        senderId: String(ctx.chat!.id),
+        senderName: this.buildSenderName(ctx),
+        body: ctx.message.caption ?? "",
+        messageId: String(ctx.message.message_id),
+        timestamp: new Date(ctx.message.date * 1000),
+        file: {
+          buffer,
+          mimetype: doc.mime_type ?? "application/octet-stream",
+          filename: doc.file_name ?? `file-${Date.now()}`,
+        },
+      });
+    } catch (err) {
+      console.error("[Gateway] [Telegram] Failed to download document:", err);
     }
   }
 }

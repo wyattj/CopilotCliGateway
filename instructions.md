@@ -8,7 +8,7 @@ If you need to ask the user a question, simply include it as plain text in your 
 
 ## File Input
 
-When the user sends an image, it is saved to the `./tmp` folder (relative to your working directory). The prompt will include the file path — use the Read tool to open and analyze the image directly.
+When the user sends a file, it is saved to the `./tmp` folder (relative to your working directory). Images are saved to `./tmp/images`. The prompt will include the file path — use the Read tool to open and analyze the file directly.
 
 ## File Output
 
