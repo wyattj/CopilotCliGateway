@@ -10,7 +10,8 @@ Send a message in your chat app, get a response from Copilot — complete with s
 - **Session management** — Create, switch, and list named sessions; context persists across restarts
 - **Per-session working directories** — Each session can target a different project folder
 - **Voice messages** — Automatic transcription via OpenAI Whisper, then forwarded to Copilot
-- **Image input** — Send photos to Copilot for analysis (saved to `tmp/`, read by Copilot directly)
+- **File input** — Send any file (documents, PDFs, spreadsheets, etc.) to Copilot; images are saved to `tmp/images/`, other files to `tmp/`
+- **Image input** — Send photos to Copilot for analysis (saved to `tmp/images/`, read by Copilot directly)
 - **File output** — Copilot saves files to `outputs/` and they're automatically delivered to your chat (images, videos, documents)
 - **Model switching** — Change the AI model on the fly with `/model`
 - **Permission controls** — Toggle between `ask` and `allow-all` modes; allow or deny specific tools
@@ -58,7 +59,6 @@ Edit `config.json` to set up your channels and services:
   "openai": {
     "apiKey": "",               // For Whisper voice transcription
     "whisperModel": "whisper-1",
-    "visionModel": "gpt-4o",
     "language": ""              // Optional language hint for Whisper
   }
 }
@@ -126,8 +126,7 @@ CopilotCliGateway/
 │       ├── copilot-cli.ts       # Copilot CLI process management
 │       ├── session-store.ts     # Session persistence
 │       ├── mcp-config.ts        # MCP server discovery
-│       ├── whisper.ts           # OpenAI Whisper transcription
-│       └── vision.ts            # OpenAI Vision (GPT-4o)
+│       └── whisper.ts           # OpenAI Whisper transcription
 ├── config.json                  # Runtime configuration
 ├── instructions.md              # System instructions injected into sessions
 ├── package.json
@@ -138,7 +137,7 @@ CopilotCliGateway/
 
 1. The gateway starts one or both messaging channels (WhatsApp / Telegram)
 2. Incoming messages are filtered by the allowed users/numbers whitelist
-3. Voice messages are transcribed via Whisper; images are saved to `tmp/`
+3. Voice messages are transcribed via Whisper; images are saved to `tmp/images/`; other files are saved to `tmp/`
 4. The message (or transcription) is sent to Copilot CLI as a prompt via `spawn()`
 5. Copilot's response is delivered back to the user in chat
 6. Any files Copilot saves to `outputs/` are automatically sent to the user
