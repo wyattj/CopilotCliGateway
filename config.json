@@ -1,0 +1,27 @@
+{
+  "whatsapp": {
+    "enabled": true,
+    "phoneNumber": "",
+    "allowedNumbers": [
+      ""
+    ],
+    "authDir": "./auth_state"
+  },
+  "telegram": {
+    "enabled": true,
+    "botToken": "",
+    "allowedUsers": [
+      "@fromkoval"
+    ]
+  },
+  "copilot": {
+    "timeout": 1200000,
+    "additionalArgs": [],
+    "useGh": true
+  },
+  "openai": {
+    "apiKey": "",
+    "whisperModel": "whisper-1",
+    "language": ""
+  }
+}

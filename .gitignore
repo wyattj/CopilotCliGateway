@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# WhatsApp auth state
+auth_state/
+
+# Session data
+sessions.json
+
+# Temporary files (user-uploaded images)
+tmp/
+
+# Output files (delivered to chat)
+outputs/
+
+# Claude Code
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
