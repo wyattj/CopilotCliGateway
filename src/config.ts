@@ -14,6 +14,8 @@ export interface CopilotConfig {
   workingDirectory: string;
   /** If true, use "gh copilot" instead of "copilot" directly. Defaults to false. */
   useGh: boolean;
+  /** Interval in seconds to send stdout progress updates to the user. 0 disables. Defaults to 60. */
+  stdoutIntervalSeconds: number;
 }
 
 export interface OpenAIConfig {
@@ -52,6 +54,7 @@ const DEFAULT_CONFIG: GatewayConfig = {
     additionalArgs: [],
     workingDirectory: "",
     useGh: false,
+    stdoutIntervalSeconds: 60,
   },
   openai: {
     apiKey: "",

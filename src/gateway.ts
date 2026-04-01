@@ -503,10 +503,18 @@ export class Gateway {
       // Inject instructions on first Copilot call (session exists but instructions not yet sent)
       await this.ensureInstructionsInjected(session);
 
+      // Respond to the user that we Copilot is working, it may take a bit...
+      await channel.sendMessage(msg.senderId, `🤖 processing...`);
+
       // Show typing indicator
       await channel.sendTyping?.(msg.senderId);
 
-      const response = await this.copilot.execute(prompt, session.id, session.workingDirectory);
+      const response = await this.copilot.execute(prompt, session.id, session.workingDirectory, (delta) => {
+        const progressMsg = `${delta}`;
+        channel.sendMessage(msg.senderId, progressMsg).catch((err) => {
+          console.error(`[Gateway] Failed to send progress update: ${err}`);
+        });
+      });
 
       // Stop typing
       await channel.stopTyping?.(msg.senderId);

@@ -6,6 +6,8 @@ export interface CopilotCliOptions {
   workingDirectory?: string;
   /** If true, use "gh copilot" instead of "copilot" directly. */
   useGh?: boolean;
+  /** Interval in seconds to send stdout progress updates. 0 disables. */
+  stdoutIntervalSeconds?: number;
 }
 
 export interface CopilotResponse {
@@ -57,11 +59,15 @@ export function fetchAvailableModels(useGh = false): Promise<string[]> {
 
 export type PermissionsMode = "ask" | "allow-all";
 
+/** Callback that receives new stdout text since the last progress tick. */
+export type ProgressCallback = (delta: string) => void;
+
 export class CopilotCliService {
   private readonly timeout: number;
   private readonly additionalArgs: string[];
   readonly useGh: boolean;
   readonly workingDirectory: string | undefined;
+  readonly stdoutIntervalSeconds: number;
   private _model: string | null = null;
   private _permissions: PermissionsMode = "ask";
   private _allowedTools: string[] = [];
@@ -73,6 +79,7 @@ export class CopilotCliService {
     this.additionalArgs = options.additionalArgs;
     this.useGh = options.useGh ?? false;
     this.workingDirectory = options.workingDirectory || undefined;
+    this.stdoutIntervalSeconds = options.stdoutIntervalSeconds ?? 60;
   }
 
   // ── model ──
@@ -172,7 +179,7 @@ export class CopilotCliService {
 
   // ── execution ──
 
-  execute(prompt: string, sessionId?: string, cwd?: string): Promise<CopilotResponse> {
+  execute(prompt: string, sessionId?: string, cwd?: string, onProgress?: ProgressCallback): Promise<CopilotResponse> {
     return new Promise((resolve, reject) => {
       const permArgs = this.buildPermissionArgs();
 
@@ -202,6 +209,21 @@ export class CopilotCliService {
       let stdout = "";
       let stderr = "";
       let timedOut = false;
+      let lastSentIndex = 0;
+
+      // Progress interval — send new stdout delta to the caller periodically
+      let progressHandle: ReturnType<typeof setInterval> | null = null;
+      if (onProgress && this.stdoutIntervalSeconds > 0) {
+        progressHandle = setInterval(() => {
+          if (stdout.length > lastSentIndex) {
+            const delta = stripAnsi(stdout.slice(lastSentIndex)).trim();
+            if (delta) {
+              onProgress(delta);
+            }
+            lastSentIndex = stdout.length;
+          }
+        }, this.stdoutIntervalSeconds * 1000);
+      }
 
       // Manual timeout — spawn() does not support the timeout option
       const timeoutHandle = setTimeout(() => {
@@ -222,6 +244,7 @@ export class CopilotCliService {
       });
 
       child.on("error", (err) => {
+        if (progressHandle) clearInterval(progressHandle);
         this._activeChild = null;
         reject(new Error(`Failed to start Copilot CLI: ${err.message}`));
       });
@@ -232,6 +255,7 @@ export class CopilotCliService {
       // "exit" fires as soon as the main process exits.
       child.on("exit", (code, signal) => {
         clearTimeout(timeoutHandle);
+        if (progressHandle) clearInterval(progressHandle);
         this._activeChild = null;
 
         // Detach stdio so lingering child processes don't block garbage collection
@@ -256,13 +280,15 @@ export class CopilotCliService {
           return;
         }
 
-        const text = stripAnsi(stdout).trim();
+        // If progress updates were sent, only return the remaining unsent portion
+        const remaining = lastSentIndex > 0 ? stdout.slice(lastSentIndex) : stdout;
+        const text = stripAnsi(remaining).trim();
         const model = extractModel(stripAnsi(stderr));
 
-        if (!text) {
+        if (!text && lastSentIndex === 0) {
           resolve({ text: "(No response from Copilot CLI)", model });
         } else {
-          resolve({ text, model });
+          resolve({ text: text || "(No additional output)", model });
         }
       });
 
